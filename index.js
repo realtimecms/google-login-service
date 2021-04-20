@@ -32,6 +32,11 @@ const Login = definition.model({
       type: User
     }
   },
+  indexes: {
+    byUser: {
+      property: "user"
+    }
+  },
   crud: {
     options: {
       access: (params, {client, service, visibilityTest}) => {
@@ -214,17 +219,23 @@ definition.event({
   name: "UserDeleted",
   properties: {
     user: {
-      type: User,
-      idOnly: true
+      type: User
     }
   },
   async execute({ user }) {
     await app.dao.request(['database', 'query'], app.databaseName, `(${
-        async (input, output, { user }) =>
-            await input.table("googleLogin_Login").onChange((obj, oldObj) => {
-              if(obj && obj.user == user) output.table("googleLogin_Login").delete(obj.id)
-            })
-    })`, { user })
+        async (input, output, { table, index, user }) => {
+          const prefix = `"${user}"_`
+          await (await input.index(index)).range({
+            gte: prefix,
+            lte: prefix+"\xFF\xFF\xFF\xFF"
+          }).onChange((ind, oldInd) => {
+            if(ind && ind.to) {
+              output.table(table).delete(ind.to)
+            }
+          })
+        }
+    })`, { table: Login.tableName, index: Login.tableName + '_byUser', user })
   }
 })
 
