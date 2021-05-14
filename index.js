@@ -1,6 +1,5 @@
-const App = require("@live-change/framework")
 const validators = require("../validation")
-const app = new App()
+const app = require("@live-change/framework").app()
 
 const {OAuth2Client} = require('google-auth-library');
 
