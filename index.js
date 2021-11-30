@@ -224,7 +224,7 @@ definition.action({
         goog: googUser
       }
     }])
-    let userRow = await User.get(existingLogin.user)
+    let userRow = await User.get(client.user)
     if(!userRow.userData.picture) { // Load picture if not exists
       // Completly asynchronous
       service.triggerService('pictures', {
