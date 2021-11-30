@@ -185,6 +185,72 @@ definition.action({
 
 })
 
+definition.action({
+  name: "connect",
+  access: (params, { client, service }) => {
+    if(!client.user) return false
+    return true
+  },
+  async execute({ accessToken }, { client, service }, emit) {
+    const ticket = await googClient.verifyIdToken({
+      idToken: accessToken,
+      audience: googClientId
+    })
+    const googUser = ticket.getPayload()
+    console.log("GOOGLE USER", googUser)
+    const existingLogin = await Login.get(googUser.sub)
+    if(existingLogin) { /// Exists
+      if(existingLogin.user != client.user) throw 'taken'
+      throw 'alreadyConnected'
+    }
+    emit("googleLogin", [{
+      type: "LoginCreated",
+      login: googUser.sub,
+      data: {
+        id: googUser.sub,
+        user: client.user,
+        name: googUser.name,
+        email: googUser.email,
+        firstName: googUser.given_name,
+        lastName: googUser.family_name
+      }
+    }])
+    emit("users", [{
+      type: "loginMethodAdded",
+      user: client.user,
+      method: {
+        type: "google",
+        id: googUser.sub,
+        goog: googUser
+      }
+    }])
+    let userRow = await User.get(existingLogin.user)
+    if(!userRow.userData.picture) { // Load picture if not exists
+      // Completly asynchronous
+      service.triggerService('pictures', {
+        type: "createPictureFromUrl",
+        owner: user,
+        name: "google-profile-picture",
+        purpose: "users-updatePicture-picture",
+        url: googUser.picture,
+        cropped: true
+      }).then(picture => {
+        emit('users', [{
+          type: "UserUpdated",
+          user,
+          data: {
+            userData: {
+              picture
+            }
+          }
+        }])
+      }).catch(e => {
+      })
+    }
+  }
+
+})
+
 /*definition.action({
   name: "removeConnection", // override CRUD operation
   properties: {},
