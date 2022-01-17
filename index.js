@@ -223,6 +223,14 @@ definition.action({
         id: googUser.sub,
         goog: googUser
       }
+    }, {
+      type: "UserUpdated",
+      user: client.user,
+      data: {
+        userData: {
+          email: googUser.email
+        }
+      }
     }])
     let userRow = await User.get(client.user)
     if(!userRow.userData.picture) { // Load picture if not exists
